@@ -1,0 +1,233 @@
+Option Compare Binary
+Option Explicit
+Option Base 1
+
+'////////////////////////////////////////////////////////////////////////////
+'  Parameters of the Genetic Algorithm:
+'////////////////////////////////////////////////////////////////////////////
+
+Private Const NBR_GENERATIONS As Long = 10
+Private Const PROB_MUT As Double = (1 / NBR_GENES)
+Private Const TAILLE_POP As Long = 1000   'Pair
+Private Const NBR_GENES As Long = 50
+Private Const PI As Double = 3.14159265358979
+
+'////////////////////////////////////////////////////////////////////////////
+'  Fitness Function:
+'////////////////////////////////////////////////////////////////////////////
+
+Public Function fitness2(x As String) As Double
+    Dim s As Double
+    Dim j As Double, t As Double
+    
+
+   If fitness2 < 0 Then Exit Function
+'   t = Timer()
+''
+'        For j = 1 To NBR_GENES
+'                If Mid(x, j, 1) = 1 Then
+'                    s = s + Sqr(j)
+'                End If
+'        Next
+'
+'    fitness2 = ((s - (30 * PI)) ^ 2 + 1) ^ -1
+
+'    Debug.Print Timer() - s 's, p
+'    t = Timer()
+    
+     For j = 1 To NBR_GENES
+                If Mid(x, j, 1) = 1 Then
+                    s = s + Sqr(j)
+                End If
+        Next
+
+    fitness2 = (Abs(s - (30 * PI)) + 1) ^ -1
+'   Debug.Print Timer() - s
+            
+End Function
+
+'////////////////////////////////////////////////////////////////////////////
+'  Uniform Crossover Function:
+'////////////////////////////////////////////////////////////////////////////
+
+Public Sub crossover(ByVal x As String, ByVal y As String)
+   
+   Dim cut As Long, h As String
+   Dim enfant1 As String, enfant2 As String
+   
+   Randomize
+
+   cut = Int((NBR_GENES * Rnd + 1))
+   
+    h = Left(x, cut)
+    enfant1 = Left(y, cut) + Right(x, NBR_GENES - cut)
+    enfant2 = Left(x, cut) + Right(y, NBR_GENES - cut)
+
+ 'Debug.Print cut, enfant1, enfant2
+ 
+End Sub
+
+'////////////////////////////////////////////////////////////////////////////
+'  Mutate Function (flip bit):
+'////////////////////////////////////////////////////////////////////////////
+
+Public Sub mutate(x As String)
+  Dim i As Long, ch As Variant
+
+  ch = x
+  Randomize
+
+  For i = 1 To NBR_GENES
+    If Rnd() <= PROB_MUT Then
+        If Mid(ch, i, 1) = 0 Then
+            Mid(ch, i, 1) = 1
+        ElseIf Mid(ch, i, 1) = 1 Then
+            Mid(ch, i, 1) = 0
+
+    x = ch
+
+        End If
+    End If
+  Next
+
+    'Debug.Print x
+End Sub
+
+'////////////////////////////////////////////////////////////////////////////
+'  Selection Function (proportionate to the fitness adjustment):
+'////////////////////////////////////////////////////////////////////////////
+
+Public Function selection(f() As Double) As Long
+   Dim i As Long
+   Dim u As Double, cdf As Double
+   u = Rnd() * WorksheetFunction.Sum(f)
+
+   Do
+      i = i + 1
+      cdf = cdf + f(i)
+   Loop Until cdf >= u
+
+   selection = i
+End Function
+
+'////////////////////////////////////////////////////////////////////////////
+'  New Random Population Function:
+'////////////////////////////////////////////////////////////////////////////
+
+Public Function newPopulation() As String()
+   Dim pop(1 To TAILLE_POP) As String
+   Dim x As String * NBR_GENES
+   Dim i As Long, j As Long
+   
+   For i = 1 To TAILLE_POP
+      For j = 1 To NBR_GENES
+         Mid(x, j, 1) = IIf(Rnd() <= 0.5, "1", "0")
+      Next
+      
+      pop(i) = x
+   Next
+   
+   newPopulation = pop
+End Function
+
+'////////////////////////////////////////////////////////////////////////////
+'  Print Best Genome Function:
+'////////////////////////////////////////////////////////////////////////////
+
+
+Public Sub printBest(pop() As String)
+   Dim b As Double, i As Long, k As Long, x As String
+
+    Do
+        i = i + 1
+        x = fitness2(pop(i))
+            If x > b Then b = x
+                If b = x Then k = i
+    Loop While i < TAILLE_POP
+    
+    pop(1) = pop(k)
+    
+    'Debug.Print pop(1)   ', b, k
+End Sub
+
+'////////////////////////////////////////////////////////////////////////////
+'  Main:
+'////////////////////////////////////////////////////////////////////////////
+
+
+Public Sub genAlg()
+   Dim pop1() As String                   'Parent population
+   Dim pop2() As String                   'Child population
+   Dim i As Long, j As Long               'Control variables
+   Dim x As String * NBR_GENES            'First person
+   Dim y As String * NBR_GENES            'Second person
+   Dim f(1 To TAILLE_POP) As Double       'Le tableau des valeurs d'ajustement
+   Dim enfant1 As String * NBR_GENES, enfant2 As String * NBR_GENES
+   Dim z As Long
+   
+   For z = 1 To 1000
+
+   
+'////////////////////////////////////////////////////////////////////////////
+' Initialisation:
+'////////////////////////////////////////////////////////////////////////////
+   
+   pop1() = newPopulation()               'Initialized population
+   ReDim pop2(1 To TAILLE_POP) As String  
+   
+   'Debug.Print pop1(1), pop1(2)
+   
+'////////////////////////////////////////////////////////////////////////////
+'  Array Allocation:
+'////////////////////////////////////////////////////////////////////////////
+    
+   For i = 1 To NBR_GENERATIONS      
+      For j = 1 To TAILLE_POP
+         f(j) = fitness2(pop1(j))
+      Next
+      
+      
+      'Debug.Print f(1), f(2)
+
+'////////////////////////////////////////////////////////////////////////////
+' Creation of Child Population:
+'////////////////////////////////////////////////////////////////////////////
+       
+      For j = 1 To TAILLE_POP \ 2
+         enfant1 = pop1(selection(f()))
+         enfant2 = pop1(selection(f()))
+         
+         
+         crossover enfant1, enfant2
+         mutate enfant1
+         mutate enfant2
+         
+         pop2(2 * j - 1) = enfant1
+         pop2(j * 2) = enfant2
+         
+         'Debug.Print enfant1, enfant2, pop2(1), pop2(2)
+        
+      Next
+    
+
+      
+'////////////////////////////////////////////////////////////////////////////
+'  Remplacement of Parent Population by Child Population:
+'////////////////////////////////////////////////////////////////////////////
+
+      pop1() = pop2()
+    
+   Next
+   
+'////////////////////////////////////////////////////////////////////////////
+'  Print Best Genome of Last Population:
+'////////////////////////////////////////////////////////////////////////////
+   
+   printBest pop1()
+   
+   Feuil2.Columns(1).Cells(z) = pop1()
+   Feuil2.Columns(2).Cells(z) = fitness2(Feuil2.Columns(1).Cells(z).Value)
+   
+   Next
+   
+End Sub
